@@ -1,5 +1,9 @@
 # 🧠 OpenSim RAG Chat Agent: Powered by Mistral AI
 
+
+![OpenSim RAG Demo](assets/opensim-rag-demo.gif)
+
+...
 ## 🚀 Project Overview
 
 This cutting-edge Retrieval-Augmented Generation (RAG) chat agent provides intelligent, context-aware assistance for OpenSim biomechanics software users. Leveraging the powerful Mistral 7B Instruct model, our application delivers precise and helpful responses.
