@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenSim RAG Chat Assistant</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header d-flex align-items-center">
+            <img src="https://opensim.stanford.edu/wp-content/uploads/2020/05/opensim_logo.png" alt="OpenSim Logo" class="logo">
+            <h1>OpenSim RAG Chat Assistant</h1>
+        </div>
+        
+        <div class="chat-messages" id="chatMessages">
+            <div class="message assistant-message">
+                <div class="message-content">
+                    Hello! I'm the OpenSim RAG Chat Assistant. I can answer questions about OpenSim biomechanics software, its features, workflows, and usage. How can I help you today?
+                </div>
+            </div>
+        </div>
+        
+        <div class="loading" id="loading">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p>Searching OpenSim documentation...</p>
+        </div>
+        
+        <div class="input-area">
+            <input type="text" id="userInput" placeholder="Ask a question about OpenSim..." class="form-control">
+            <button id="sendButton" class="btn btn-primary">Send</button>
+        </div>
+        
+        <div class="footer mt-4">
+            <p>This assistant uses RAG (Retrieval-Augmented Generation) to provide information from OpenSim documentation, GitHub repositories, API documentation, and research papers.</p>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

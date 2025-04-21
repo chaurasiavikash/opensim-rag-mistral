@@ -1,0 +1,114 @@
+/* OpenSim RAG Chat Assistant Custom Styles */
+
+/* Custom scrollbar for chat messages */
+.chat-messages::-webkit-scrollbar {
+    width: 8px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+    background: #3a86ff;
+    border-radius: 10px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover {
+    background: #2a75e0;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.message {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .chat-messages {
+        height: 400px;
+    }
+    
+    .message {
+        max-width: 90%;
+    }
+    
+    .chat-header h1 {
+        font-size: 1.5rem;
+    }
+}
+
+/* Code formatting in messages */
+pre {
+    background-color: #f8f9fa;
+    padding: 10px;
+    border-radius: 5px;
+    overflow-x: auto;
+    font-size: 0.9em;
+}
+
+code {
+    background-color: #f8f9fa;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-size: 0.9em;
+}
+
+/* Highlight for search terms */
+.highlight {
+    background-color: #ffff99;
+    padding: 0 2px;
+}
+
+/* Tooltip for source links */
+.source-tooltip {
+    position: relative;
+    display: inline-block;
+}
+
+.source-tooltip .tooltip-text {
+    visibility: hidden;
+    width: 200px;
+    background-color: #555;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -100px;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.source-tooltip:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* OpenSim brand colors */
+.opensim-primary {
+    color: #3a86ff;
+}
+
+.opensim-secondary {
+    color: #ff006e;
+}
+
+.opensim-accent {
+    color: #8338ec;
+}
+
+/* Welcome message styling */
+.welcome-message {
+    border-left: 4px solid #3a86ff;
+    padding-left: 15px;
+}
