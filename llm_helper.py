@@ -8,6 +8,7 @@ with optimizations for memory efficiency and response quality.
 
 import os
 import torch
+import re
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 class MistralLLM:
@@ -74,8 +75,30 @@ class MistralLLM:
         if len(context) > 3000:
             context = context[:3000] + "..."
         
+        # Check if query is likely about code
+        code_keywords = ["code", "script", "programming", "function", "class", 
+                        "implement", "python", "example", "syntax", "how to write"]
+        is_code_question = any(keyword in query.lower() for keyword in code_keywords)
+        
         # Create Mistral-specific instruction prompt
-        prompt = f"""<s>[INST] You are OpenSimAssistant, a helpful AI focused on OpenSim documentation.
+        if is_code_question:
+            prompt = f"""<s>[INST] You are OpenSimAssistant, a helpful AI focused on OpenSim documentation.
+
+Context Information:
+{context}
+
+User Question: {query}
+
+Provide a clear, well-formatted code example with:
+1. Proper imports at the top
+2. Clear function definitions with docstrings
+3. Consistent indentation (4 spaces)
+4. Helpful comments explaining key operations
+5. Code that can be directly copy-pasted and executed
+
+Format all code with proper Python triple backticks (```python) and ensure it follows best practices. [/INST]"""
+        else:
+            prompt = f"""<s>[INST] You are OpenSimAssistant, a helpful AI focused on OpenSim documentation.
 
 Context Information:
 {context}
@@ -121,11 +144,51 @@ If the information is incomplete, explain what you know and suggest further rese
             else:
                 response = full_response.replace(prompt, "").strip()
             
+            # Format code blocks if this is a code-related question
+            if is_code_question:
+                response = self._format_code_blocks(response)
+            
             return response or self.fallback_response(query)
         
         except Exception as e:
             print(f"Response generation error: {e}")
             return self.fallback_response(query)
+    
+    def _format_code_blocks(self, text):
+        """
+        Format code blocks to ensure proper indentation and structure
+        
+        Args:
+            text (str): Text containing code blocks
+            
+        Returns:
+            str: Text with properly formatted code blocks
+        """
+        # Pattern to match code blocks (including the language specifier)
+        pattern = r"```(\w*)\n(.*?)\n```"
+        
+        def format_code(match):
+            language = match.group(1) or "python"  # Default to python if not specified
+            code = match.group(2)
+            
+            # Remove excess blank lines at beginning and end
+            code = code.strip()
+            
+            # Standardize indentation (4 spaces)
+            lines = code.split('\n')
+            # Find the minimum indentation (excluding empty lines)
+            non_empty_lines = [line for line in lines if line.strip()]
+            if non_empty_lines:
+                min_indent = min(len(line) - len(line.lstrip()) for line in non_empty_lines if line.strip())
+                # Remove common leading whitespace but maintain relative indentation
+                code = '\n'.join(line[min_indent:] if line.strip() else line for line in lines)
+            
+            # Add proper language specifier
+            return f"```{language}\n{code}\n```"
+        
+        # Replace all code blocks with properly formatted ones
+        formatted_text = re.sub(pattern, format_code, text, flags=re.DOTALL)
+        return formatted_text
     
     def fallback_response(self, query):
         """

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-OpenSim RAG System - Improved App with LLM Integration
+OpenSim RAG System - Improved App with Code Formatting
 
 This script integrates all components of the OpenSim RAG system and runs the web application.
 Uses Sentence Transformers for retrieval and Mistral for generating responses.
@@ -10,12 +10,14 @@ import os
 import json
 import numpy as np
 import faiss
+import re
 from flask import Flask, request, jsonify, render_template, send_from_directory
 import markdown
 
 # Import the LLM helper
-#from llm_helper import Phi2LLM
 from llm_helper import MistralLLM
+from code_formatter import CodeFormattingLLM  # Import your existing CodeFormattingLLM
+
 # Configuration
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # Main folder containing app.py
 VECTOR_DB_DIR = os.path.join(BASE_DIR, "vector_db")
@@ -224,15 +226,31 @@ class OpenSimRAG:
         # Combine the contexts
         combined_context = "\n\n".join(contexts)
         
-        # Generate LLM response using Mistral
+        # Generate LLM response
         global llm
         if llm is None:
-            llm =  MistralLLM()#Phi2LLM()
-            print("Mistral LLM initialized for response generation")
+            # Create base LLM
+            base_llm = MistralLLM()
+            
+            # Check if this is a code-related question
+            code_keywords = ["code", "script", "programming", "function", "class", 
+                            "implement", "python", "example", "syntax", "how to write"]
+            is_code_question = any(keyword in question.lower() for keyword in code_keywords)
+            
+            # Only wrap with CodeFormattingLLM if enhanced formatting is needed
+            if is_code_question:
+                llm = CodeFormattingLLM(base_llm)
+                print("Enhanced LLM initialized with code formatting capabilities")
+            else:
+                llm = base_llm
+                print("Standard LLM initialized")
         
         try:
             # Generate response using LLM
             generated_answer = llm.generate_response(question, contexts)
+            
+            # Check if response contains code blocks
+            has_code = bool(re.search(r"```\w*\n.*?\n```", generated_answer, re.DOTALL))
             
             # Format sources for display
             formatted_sources = []
@@ -249,7 +267,8 @@ class OpenSimRAG:
                 "question": question,
                 "answer": generated_answer,
                 "sources": formatted_sources,
-                "source_documents": combined_context  # Keep for compatibility
+                "source_documents": combined_context,
+                "has_code": has_code
             }
             
             return answer

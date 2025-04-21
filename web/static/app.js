@@ -1,4 +1,5 @@
 // OpenSim RAG Chat Assistant JavaScript
+// Enhanced with VS Code-like code formatting
 
 document.addEventListener('DOMContentLoaded', function() {
     const chatMessages = document.getElementById('chatMessages');
@@ -6,9 +7,21 @@ document.addEventListener('DOMContentLoaded', function() {
     const sendButton = document.getElementById('sendButton');
     const loading = document.getElementById('loading');
     
-    // Add welcome message with OpenSim styling
-    const welcomeDiv = document.querySelector('.message.assistant-message .message-content');
-    welcomeDiv.classList.add('welcome-message');
+    // Initialize clipboard.js for code copying
+    const clipboard = new ClipboardJS('.code-copy-btn');
+    
+    clipboard.on('success', function(e) {
+        // Show success indicator
+        const codeBlock = e.trigger.closest('.code-container');
+        const copyBtn = codeBlock.querySelector('.code-copy-btn');
+        
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => {
+            copyBtn.textContent = 'Copy';
+        }, 2000);
+        
+        e.clearSelection();
+    });
     
     // Function to escape HTML to prevent XSS
     function escapeHTML(text) {
@@ -22,11 +35,55 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Function to format code blocks in text
     function formatCodeBlocks(text) {
-        // Replace ```code``` with <pre><code>code</code></pre>
-        let formatted = text.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+        // First, handle code blocks with language specified (```python)
+        let formatted = text.replace(/```(\w+)\n([\s\S]*?)```/g, function(match, language, code) {
+            // Create VS Code-like container
+            return `
+            <div class="code-container">
+                <div class="code-header">
+                    <span class="code-language">${language}</span>
+                    <button class="code-copy-btn" data-clipboard-text="${escapeHTML(code)}">Copy</button>
+                </div>
+                <pre class="code-block"><code class="language-${language}">${escapeHTML(code)}</code></pre>
+            </div>`;
+        });
         
-        // Replace `code` with <code>code</code>
+        // Then, handle generic code blocks (```)
+        formatted = formatted.replace(/```\n([\s\S]*?)```/g, function(match, code) {
+            return `
+            <div class="code-container">
+                <div class="code-header">
+                    <span class="code-language">plaintext</span>
+                    <button class="code-copy-btn" data-clipboard-text="${escapeHTML(code)}">Copy</button>
+                </div>
+                <pre class="code-block"><code>${escapeHTML(code)}</code></pre>
+            </div>`;
+        });
+        
+        // Replace inline code `code` with <code>code</code>
         formatted = formatted.replace(/`([^`]+)`/g, '<code>$1</code>');
+        
+        return formatted;
+    }
+    
+    // Process normal text for line breaks and paragraphs
+    function formatText(text) {
+        // Convert line breaks to <br> and handle paragraphs
+        let formatted = text;
+        
+        // Replace double line breaks with paragraph tags
+        formatted = formatted.replace(/\n\s*\n/g, '</p><p>');
+        
+        // Replace single line breaks with <br>
+        formatted = formatted.replace(/\n(?!\n)/g, '<br>');
+        
+        // Wrap in paragraph tags if not already done
+        if (!formatted.startsWith('<p>')) {
+            formatted = '<p>' + formatted;
+        }
+        if (!formatted.endsWith('</p>')) {
+            formatted += '</p>';
+        }
         
         return formatted;
     }
@@ -53,15 +110,52 @@ document.addEventListener('DOMContentLoaded', function() {
         const contentDiv = document.createElement('div');
         contentDiv.className = 'message-content';
         
-        // Format and sanitize content
-        let formattedContent = escapeHTML(content);
-        formattedContent = formatCodeBlocks(formattedContent);
-        
-        if (!isUser) {
+        if (isUser) {
+            // For user messages, just escape HTML and apply simple formatting
+            contentDiv.innerHTML = formatText(escapeHTML(content));
+        } else {
+            // For assistant messages, we need more complex formatting
+            
+            // Step 1: Extract and temporarily replace code blocks
+            const codeBlocks = [];
+            let withoutCode = content;
+            
+            // Extract code blocks with language specifier
+            withoutCode = withoutCode.replace(/```(\w+)\n([\s\S]*?)```/g, function(match, language, code) {
+                codeBlocks.push({ language, code });
+                return `[CODE_BLOCK_${codeBlocks.length - 1}]`;
+            });
+            
+            // Extract generic code blocks
+            withoutCode = withoutCode.replace(/```\n([\s\S]*?)```/g, function(match, code) {
+                codeBlocks.push({ language: 'plaintext', code });
+                return `[CODE_BLOCK_${codeBlocks.length - 1}]`;
+            });
+            
+            // Step 2: Process text content
+            let formattedContent = escapeHTML(withoutCode);
             formattedContent = highlightSearchTerms(formattedContent, query);
+            formattedContent = formatText(formattedContent);
+            
+            // Step 3: Replace inline code
+            formattedContent = formattedContent.replace(/`([^`]+)`/g, '<code>$1</code>');
+            
+            // Step 4: Put code blocks back
+            formattedContent = formattedContent.replace(/\[CODE_BLOCK_(\d+)\]/g, function(match, index) {
+                const { language, code } = codeBlocks[parseInt(index)];
+                return `
+                <div class="code-container">
+                    <div class="code-header">
+                        <span class="code-language">${language}</span>
+                        <button class="code-copy-btn" data-clipboard-text="${escapeHTML(code)}">Copy</button>
+                    </div>
+                    <pre class="code-block"><code class="language-${language}">${escapeHTML(code)}</code></pre>
+                </div>`;
+            });
+            
+            contentDiv.innerHTML = formattedContent;
         }
         
-        contentDiv.innerHTML = formattedContent;
         messageDiv.appendChild(contentDiv);
         
         // Add sources if available
@@ -122,6 +216,11 @@ document.addEventListener('DOMContentLoaded', function() {
         
         chatMessages.appendChild(messageDiv);
         chatMessages.scrollTop = chatMessages.scrollHeight;
+        
+        // Apply syntax highlighting to code blocks
+        messageDiv.querySelectorAll('pre code').forEach((block) => {
+            hljs.highlightBlock(block);
+        });
     }
     
     // Function to send a message
@@ -136,7 +235,7 @@ document.addEventListener('DOMContentLoaded', function() {
         userInput.value = '';
         
         // Show loading indicator
-        loading.style.display = 'block';
+        loading.style.display = 'flex';
         
         // Send request to server
         fetch('/api/query', {
@@ -156,8 +255,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
+            // Check if the response has the 'has_code' flag
+            const hasCode = data.has_code || (data.answer && data.answer.includes('```'));
+            
             // Add assistant message to chat
-            addMessage(data.answer, false, data.sources, data.context, message);
+            addMessage(data.answer, false, data.sources, data.source_documents, message);
+            
+            // If this message had code, reinitialize the copy buttons
+            if (hasCode) {
+                // Refresh clipboard.js for newly added code blocks
+                clipboard.destroy();
+                new ClipboardJS('.code-copy-btn');
+            }
         })
         .catch(error => {
             // Hide loading indicator
